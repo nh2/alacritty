@@ -7,7 +7,7 @@ use std::time::{Instant};
 
 use serde_json as json;
 use parking_lot::MutexGuard;
-use glutin::{self, ModifiersState, Event, ElementState};
+use glutin::{self, ModifiersState, Event, ElementState, MouseButton, TouchPhase, MouseScrollDelta};
 use copypasta::{Clipboard, Load, Store};
 
 use config::{self, Config};
@@ -303,6 +303,20 @@ impl<N: Notify> Processor<N> {
                     },
                     MouseInput { state, button, .. } => {
                         *hide_cursor = false;
+                        // Mouse button 4/5 scrolling as is common on keyboards
+                        // that have middle mouse button + TrackPoint.
+                        // Automatic translation of those to MouseWheel events
+                        // was removed in glutin in this commit:
+                        // https://github.com/tomaka/winit/commit/22bc119c#diff-2e05a82bc4ad5f1e53602d126bbe42acL218-L227
+                        match button {
+                            MouseButton::Other(4) => {
+                                processor.on_mouse_wheel(MouseScrollDelta::LineDelta(0.0, 1.0), TouchPhase::Moved);
+                            }
+                            MouseButton::Other(5) => {
+                                processor.on_mouse_wheel(MouseScrollDelta::LineDelta(0.0, -1.0), TouchPhase::Moved);
+                            }
+                            _ => ()
+                        }
                         processor.mouse_input(state, button);
                         processor.ctx.terminal.dirty = true;
                     },
